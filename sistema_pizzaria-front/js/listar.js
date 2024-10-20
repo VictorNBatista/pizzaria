@@ -126,6 +126,7 @@ async function excluirUsuario(userId) {
     }
 }
 
+// Função para visualizar o usuário
 function visualizarUsuario(userId) {
     const token = localStorage.getItem('token');
 
@@ -162,10 +163,11 @@ function visualizarUsuario(userId) {
     });
 }
 
+// Função para abrir modal de editar usuario
 function abrirModalEditarUsuario(userId) {
     const token = localStorage.getItem('token');
 
-    // Faz a requisição para buscar os dados do usuário
+    // Faz a requisição para buscar os dados atuais do usuário
     fetch(`http://localhost:8000/api/user/visualizar/${userId}`, {
         method: 'GET',
         headers: {
@@ -175,12 +177,12 @@ function abrirModalEditarUsuario(userId) {
     })
     .then(response => response.json())
     .then(data => {
-        // Preenche os campos do modal com os dados do usuário
+        // Preenche os campos do modal com os dados atuais do usuário
         document.getElementById('userIdEdit').value = userId;
         document.getElementById('nameEdit').value = data.user.name;
         document.getElementById('emailEdit').value = data.user.email;
 
-        // Abre o modal de edição
+        // Abre o modal de editar
         const editarModal = new bootstrap.Modal(document.getElementById('editarUsuarioModal'));
         editarModal.show();
     })
@@ -190,9 +192,10 @@ function abrirModalEditarUsuario(userId) {
     });
 }
 
+// Função para editar o usuário
 function editarUsuario() {
     const token = localStorage.getItem('token');
-    const userId = document.getElementById('userIdEdit').value; // Pega o ID do usuário armazenado
+    const userId = document.getElementById('userIdEdit').value;
 
     // Recupera os dados do formulário
     const nome = document.getElementById('nameEdit').value;
@@ -200,7 +203,7 @@ function editarUsuario() {
     const password = document.getElementById('passwordEdit').value;
     const passwordConfirmation = document.getElementById('password_confirmationEdit').value;
 
-    // Cria o payload para a requisição
+    // Cria a estrutura user para a requisicao
     const user = {
         name: nome,
         email: email
@@ -221,23 +224,18 @@ function editarUsuario() {
         },
         body: JSON.stringify(user)
     })
-    .then(response => {
-        if (!response.ok) {
-            // Se a resposta não for bem-sucedida, lança um erro para o bloco catch
-            throw new Error('Erro ao atualizar o usuário.');
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            alert('Usuário atualizado com sucesso!');
+        if (data.status === 200) {
+            alert(data.message);  
 
-            // Fecha o modal de edição
+            // Fecha o modal de editar
             const editarModal = bootstrap.Modal.getInstance(document.getElementById('editarUsuarioModal'));
             editarModal.hide();
 
-            // Aqui você pode adicionar lógica para atualizar a interface, como atualizar a tabela de usuários.
-        } else {
+            // Atualiza a lista
+            listarUsuarios();
+        } else {        
             alert('Erro ao atualizar o usuário: ' + data.message);
         }
     })
@@ -245,6 +243,7 @@ function editarUsuario() {
         console.error('Erro ao editar o usuário:', error);
         alert('Ocorreu um erro ao tentar atualizar o usuário.');
     });
+    
 }
 
 
