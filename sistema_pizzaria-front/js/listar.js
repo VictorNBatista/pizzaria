@@ -82,7 +82,7 @@ async function listarUsuarios() {
                 document.querySelectorAll('.editar-usuario').forEach(button => {
                     button.addEventListener('click', function() {
                         const userId = this.getAttribute('data-id');
-                        editarUsuario(userId);
+                        abrirModalEditarUsuario(userId);
                     });
                 });
 
@@ -162,83 +162,91 @@ function visualizarUsuario(userId) {
     });
 }
 
-// Função para abrir o modal de edição com os dados do usuário
-async function editarUsuario(userId) {
+function abrirModalEditarUsuario(userId) {
     const token = localStorage.getItem('token');
 
-    try {
-        // Fazer uma requisição para obter os dados do usuário
-        const response = await fetch(`http://localhost:8000/api/user/${userId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            }
-        });
+    // Faz a requisição para buscar os dados do usuário
+    fetch(`http://localhost:8000/api/user/visualizar/${userId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Preenche os campos do modal com os dados do usuário
+        document.getElementById('userIdEdit').value = userId;
+        document.getElementById('nameEdit').value = data.user.name;
+        document.getElementById('emailEdit').value = data.user.email;
 
-        if (response.ok) {
-            const user = await response.json();
-
-            // Preencher o formulário com os dados do usuário
-            document.getElementById('nameEdit').value = data.user.name;
-            document.getElementById('emailEdit').value = data.user.email;
-
-            // Abrir o modal de edição
-            const editarModal = new bootstrap.Modal(document.getElementById('editarUsuarioModal'));
-            editarModal.show();
-        } else {
-            throw new Error('Erro ao buscar os dados do usuário');
-        }
-    } catch (error) {
-        console.error('Erro:', error);
+        // Abre o modal de edição
+        const editarModal = new bootstrap.Modal(document.getElementById('editarUsuarioModal'));
+        editarModal.show();
+    })
+    .catch(error => {
+        console.error('Erro ao buscar dados do usuário:', error);
         alert('Erro ao carregar os dados do usuário.');
-    }
+    });
 }
 
-// Função para salvar as alterações do usuário
-document.getElementById('formEditarUsuario').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const userId = document.getElementById('userIdEdit').value;
+function editarUsuario() {
     const token = localStorage.getItem('token');
-    
+    const userId = document.getElementById('userIdEdit').value; // Pega o ID do usuário armazenado
+
+    // Recupera os dados do formulário
+    const nome = document.getElementById('nameEdit').value;
+    const email = document.getElementById('emailEdit').value;
+    const password = document.getElementById('passwordEdit').value;
+    const passwordConfirmation = document.getElementById('password_confirmationEdit').value;
+
+    // Cria o payload para a requisição
     const user = {
-        name: document.getElementById('nameEdit').value,
-        email: document.getElementById('emailEdit').value,
-        password: document.getElementById('passwordEdit').value,
-        password_confirmation: document.getElementById('password_confirmationEdit').value
+        name: nome,
+        email: email
     };
 
-    // Verificar se a senha e confirmação de senha são iguais
-    if (user.password && user.password !== user.password_confirmation) {
-        alert('A confirmação da senha não corresponde à senha.');
-        return;
+    // Adiciona a senha ao payload somente se for preenchida
+    if (password) {
+        user.password = password;
+        user.password_confirmation = passwordConfirmation;
     }
 
-    // Requisição para atualizar os dados do usuário
-    try {
-        const response = await fetch(`http://localhost:8000/api/user/editar/${userId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(user)
-        });
-
-        if (response.ok) {
-            alert('Usuário atualizado com sucesso!');
-            const editarModal = bootstrap.Modal.getInstance(document.getElementById('modalEditUsuario'));
-            editarModal.hide();
-            listarUsuarios(); // Recarregar a lista de usuários
-        } else {
-            throw new Error('Erro ao atualizar o usuário');
+    // Envia a requisição de atualização
+    fetch(`http://localhost:8000/api/user/atualizar/${userId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(user)
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Se a resposta não for bem-sucedida, lança um erro para o bloco catch
+            throw new Error('Erro ao atualizar o usuário.');
         }
-    } catch (error) {
-        console.error('Erro:', error);
-        alert('Erro ao atualizar o usuário.');
-    }
-});
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('Usuário atualizado com sucesso!');
+
+            // Fecha o modal de edição
+            const editarModal = bootstrap.Modal.getInstance(document.getElementById('editarUsuarioModal'));
+            editarModal.hide();
+
+            // Aqui você pode adicionar lógica para atualizar a interface, como atualizar a tabela de usuários.
+        } else {
+            alert('Erro ao atualizar o usuário: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao editar o usuário:', error);
+        alert('Ocorreu um erro ao tentar atualizar o usuário.');
+    });
+}
+
 
 // Chama a função para listar os usuários assim que a página for carregada
 document.addEventListener('DOMContentLoaded', listarUsuarios);
